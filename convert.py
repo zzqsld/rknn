@@ -65,44 +65,6 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def rewrite_input_as_uint8(model_path: Path) -> Path:
-    model = onnx.load(str(model_path))
-    graph = model.graph
-
-    if not graph.input:
-        raise ValueError("ONNX model has no inputs")
-
-    input_name = graph.input[0].name
-    graph.input[0].type.tensor_type.elem_type = TensorProto.UINT8
-
-    cast_node = helper.make_node(
-        "Cast",
-        inputs=[input_name],
-        outputs=["cast_out"],
-        to=TensorProto.FLOAT,
-    )
-    scale = helper.make_tensor("scale", TensorProto.FLOAT, [1], [255.0])
-    div_node = helper.make_node(
-        "Div",
-        inputs=["cast_out", "scale"],
-        outputs=["preprocessed"],
-    )
-
-    for node in graph.node:
-        for index, input_tensor in enumerate(node.input):
-            if input_tensor == input_name:
-                node.input[index] = "preprocessed"
-
-    graph.node.insert(0, div_node)
-    graph.node.insert(0, cast_node)
-    graph.initializer.append(scale)
-
-    fixed_path = model_path.with_name(f"{model_path.stem}_fixed.onnx")
-    onnx.save(model, str(fixed_path))
-    onnx.checker.check_model(onnx.load(str(fixed_path)))
-    return fixed_path
-
-
 def main() -> None:
     args = parse_args()
 
@@ -116,14 +78,12 @@ def main() -> None:
     if not input_path.exists():
         raise FileNotFoundError(f"Input model not found: {input_path}")
 
-    fixed_input_path = rewrite_input_as_uint8(input_path)
-
-    onnx_model = onnx.load(str(fixed_input_path))
+    onnx_model = onnx.load(str(input_path))
     onnx.checker.check_model(onnx_model)
 
     print("=" * 50)
     print(f"ONNX -> RKNN conversion target: {args.target}")
-    print(f"Input : {fixed_input_path}")
+    print(f"Input : {input_path}")
     print(f"Output: {output_path}")
     print("=" * 50)
 
@@ -137,7 +97,7 @@ def main() -> None:
         if ret != 0:
             raise RuntimeError("rknn.config failed")
 
-        ret = rknn.load_onnx(model=str(fixed_input_path))
+        ret = rknn.load_onnx(model=str(input_path))
         if ret != 0:
             raise RuntimeError("rknn.load_onnx failed")
 
