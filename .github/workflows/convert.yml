@@ -1,0 +1,75 @@
+name: Convert ONNX to RKNN
+
+on:
+  workflow_dispatch:
+    inputs:
+      onnx_source:
+        description: 'ONNX source: repo or release asset'
+        required: true
+        default: 'release'
+      release_tag:
+        description: 'Release tag containing best.onnx when onnx_source=release'
+        required: true
+        default: 'v1.0'
+      onnx_asset_name:
+        description: 'Release asset name for the ONNX file'
+        required: false
+        default: 'best.onnx'
+      input_path:
+        description: 'Repository path to the ONNX file when onnx_source=repo'
+        required: false
+        default: 'best.onnx'
+      target_platform:
+        description: 'RKNN target platform'
+        required: false
+        default: 'rk3568'
+
+jobs:
+  convert:
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install RKNN Toolkit2
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -q rknn-toolkit2 onnx
+
+      - name: Prepare ONNX input from repo or release
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event.inputs.onnx_source }}" = "repo" ]; then
+            cp "${{ github.event.inputs.input_path }}" best.onnx
+          else
+            test -n "${{ github.event.inputs.release_tag }}"
+            test -n "${{ github.event.inputs.onnx_asset_name }}"
+            curl -L --fail \
+              -o best.onnx \
+              "https://github.com/${{ github.repository }}/releases/download/${{ github.event.inputs.release_tag }}/${{ github.event.inputs.onnx_asset_name }}"
+          fi
+          ls -lh best.onnx
+
+      - name: Convert ONNX → RKNN
+        run: python convert.py --input best.onnx --output best.rknn --target ${{ github.event.inputs.target_platform }}
+
+      - name: Upload best.rknn to release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.event.inputs.release_tag }}
+          files: best.rknn
+          body: "Auto-converted RKNN model for ${{ github.event.inputs.target_platform }}"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: best-rknn
+          path: best.rknn
