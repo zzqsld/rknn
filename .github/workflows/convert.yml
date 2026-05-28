@@ -48,7 +48,10 @@ jobs:
         run: |
           set -euo pipefail
           if [ "${{ github.event.inputs.onnx_source }}" = "repo" ]; then
-            cp "${{ github.event.inputs.input_path }}" best.onnx
+            source_path="${{ github.event.inputs.input_path }}"
+            if [ "$source_path" != "best.onnx" ]; then
+              cp "$source_path" best.onnx
+            fi
           else
             test -n "${{ github.event.inputs.release_tag }}"
             test -n "${{ github.event.inputs.onnx_asset_name }}"
