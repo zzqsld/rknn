@@ -26,18 +26,18 @@ def ensure_onnx_mapping() -> None:
 
     class _Mapping:
         TENSOR_TYPE_TO_NP_TYPE = {
-            TensorProto.FLOAT: np.float32,
-            TensorProto.UINT8: np.uint8,
-            TensorProto.INT8: np.int8,
-            TensorProto.UINT16: np.uint16,
-            TensorProto.INT16: np.int16,
-            TensorProto.INT32: np.int32,
-            TensorProto.INT64: np.int64,
-            TensorProto.BOOL: "bool",
-            TensorProto.FLOAT16: np.float16,
-            TensorProto.DOUBLE: np.float64,
-            TensorProto.UINT32: np.uint32,
-            TensorProto.UINT64: np.uint64,
+            TensorProto.FLOAT: helper.tensor_dtype_to_np_dtype(TensorProto.FLOAT),
+            TensorProto.UINT8: helper.tensor_dtype_to_np_dtype(TensorProto.UINT8),
+            TensorProto.INT8: helper.tensor_dtype_to_np_dtype(TensorProto.INT8),
+            TensorProto.UINT16: helper.tensor_dtype_to_np_dtype(TensorProto.UINT16),
+            TensorProto.INT16: helper.tensor_dtype_to_np_dtype(TensorProto.INT16),
+            TensorProto.INT32: helper.tensor_dtype_to_np_dtype(TensorProto.INT32),
+            TensorProto.INT64: helper.tensor_dtype_to_np_dtype(TensorProto.INT64),
+            TensorProto.BOOL: helper.tensor_dtype_to_np_dtype(TensorProto.BOOL),
+            TensorProto.FLOAT16: helper.tensor_dtype_to_np_dtype(TensorProto.FLOAT16),
+            TensorProto.DOUBLE: helper.tensor_dtype_to_np_dtype(TensorProto.DOUBLE),
+            TensorProto.UINT32: helper.tensor_dtype_to_np_dtype(TensorProto.UINT32),
+            TensorProto.UINT64: helper.tensor_dtype_to_np_dtype(TensorProto.UINT64),
         }
 
         NP_TYPE_TO_TENSOR_TYPE = {
