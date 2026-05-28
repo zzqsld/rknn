@@ -7,7 +7,43 @@ import argparse
 from pathlib import Path
 
 import onnx
-from rknn.api import RKNN
+import numpy as np
+from onnx import TensorProto
+
+
+def ensure_onnx_mapping() -> None:
+    if hasattr(onnx, "mapping"):
+        return
+
+    try:
+        from onnx import mapping as onnx_mapping  # type: ignore
+
+        onnx.mapping = onnx_mapping
+        return
+    except Exception:
+        pass
+
+    class _Mapping:
+        TENSOR_TYPE_TO_NP_TYPE = {
+            TensorProto.FLOAT: np.float32,
+            TensorProto.UINT8: np.uint8,
+            TensorProto.INT8: np.int8,
+            TensorProto.UINT16: np.uint16,
+            TensorProto.INT16: np.int16,
+            TensorProto.INT32: np.int32,
+            TensorProto.INT64: np.int64,
+            TensorProto.BOOL: "bool",
+            TensorProto.FLOAT16: np.float16,
+            TensorProto.DOUBLE: np.float64,
+            TensorProto.UINT32: np.uint32,
+            TensorProto.UINT64: np.uint64,
+        }
+
+        NP_TYPE_TO_TENSOR_TYPE = {
+            value: key for key, value in TENSOR_TYPE_TO_NP_TYPE.items()
+        }
+
+    onnx.mapping = _Mapping()
 
 
 def parse_args() -> argparse.Namespace:
@@ -30,6 +66,10 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
+
+    ensure_onnx_mapping()
+
+    from rknn.api import RKNN
 
     input_path = Path(args.input)
     output_path = Path(args.output)
